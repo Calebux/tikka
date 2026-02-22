@@ -11,6 +11,8 @@ import {
     StellarWalletsKit,
 } from "@creit.tech/stellar-wallets-kit";
 
+/// <reference types="vite/client" />
+
 const SELECTED_WALLET_ID = "selectedWalletId";
 
 /**
@@ -18,11 +20,12 @@ const SELECTED_WALLET_ID = "selectedWalletId";
  */
 function getNetworkPassphrase(): string {
     // Try to get from env, fallback to testnet
-    const passphrase = import.meta.env.VITE_STELLAR_NETWORK_PASSPHRASE;
+    const env = (import.meta as any).env || {};
+    const passphrase = env.VITE_STELLAR_NETWORK_PASSPHRASE;
     if (passphrase) {
         return passphrase;
     }
-    
+
     // Fallback based on network
     const network = import.meta.env.VITE_STELLAR_NETWORK || "testnet";
     return network === "mainnet"
@@ -62,7 +65,7 @@ export function getKit(): StellarWalletsKit {
  */
 export async function isWalletInstalled(): Promise<boolean> {
     try {
-        const kitInstance = getKit();
+        getKit();
         // Try to get available wallets
         // This is a basic check - the kit will handle wallet detection
         return true;
@@ -82,7 +85,7 @@ export async function getAccountAddress(): Promise<string | null> {
         if (!selectedWalletId) {
             return null;
         }
-        
+
         const kitInstance = getKit();
         const { address } = await kitInstance.getAddress();
         return address;
@@ -103,17 +106,17 @@ export async function connectWallet(): Promise<{
 }> {
     try {
         const kitInstance = getKit();
-        
+
         return new Promise((resolve) => {
             try {
                 kitInstance.openModal({
-                    onWalletSelected: async (option) => {
+                    onWalletSelected: async (option: any) => {
                         try {
                             await setWallet(option.id);
                             // Small delay to ensure wallet is set
                             await new Promise((r) => setTimeout(r, 100));
                             const address = await getAccountAddress();
-                            
+
                             if (address) {
                                 resolve({
                                     success: true,
@@ -191,7 +194,7 @@ export async function signTransaction(
         if (!selectedWalletId) {
             throw new Error("No wallet connected");
         }
-        
+
         const kitInstance = getKit();
         return await kitInstance.signTransaction(transaction);
     } catch (error) {
@@ -209,5 +212,36 @@ export async function isWalletConnected(): Promise<boolean> {
         return address !== null;
     } catch (error) {
         return false;
+    }
+}
+
+/**
+ * Get the current network passphrase from the connected wallet
+ */
+export async function getNetwork(): Promise<string | null> {
+    try {
+        const selectedWalletId = getSelectedWalletId();
+        if (!selectedWalletId) return null;
+
+        const kitInstance = getKit();
+        const { network } = await kitInstance.getNetwork();
+        return network;
+    } catch (error) {
+        console.error("Error getting network:", error);
+        return null;
+    }
+}
+
+/**
+ * Switch the network in the wallet
+ * Note: Not all wallets support programmatic network switching
+ */
+export async function setNetwork(network: string): Promise<void> {
+    try {
+        const kitInstance = getKit();
+        await kitInstance.setNetwork(network);
+    } catch (error) {
+        console.error("Error setting network:", error);
+        throw error;
     }
 }

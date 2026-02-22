@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import Modal from "./modals/Modal";
 import ProcessingRaffleCreation from "./modals/ProcessingRaffleCreation";
 import RaffleCreatedSuccess from "./modals/RaffleCreatedSuccess";
+import { useWalletContext } from "../providers/WalletProvider";
+import { STELLAR_CONFIG } from "../config/stellar";
 
 interface CreateRaffleButtonProps {
     // Form data for metadata
@@ -27,7 +29,7 @@ interface CreateRaffleButtonProps {
     children?: React.ReactNode;
 }
 
-const CreateRaffleButton: React.FC<CreateRaffleButtonProps> = ({
+const CreateRaffleButton = ({
     title,
     description,
     image,
@@ -45,7 +47,8 @@ const CreateRaffleButton: React.FC<CreateRaffleButtonProps> = ({
     onError,
     className = "bg-[#FF389C] hover:bg-[#FF389C]/90 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200",
     children = "Publish Raffle",
-}) => {
+}: CreateRaffleButtonProps) => {
+    const { isConnected, isWrongNetwork, connect, switchNetwork } = useWalletContext();
     const [isLoading, setIsLoading] = useState(false);
     const [showProcessingModal, setShowProcessingModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -54,6 +57,22 @@ const CreateRaffleButton: React.FC<CreateRaffleButtonProps> = ({
     const [createdRaffleId, setCreatedRaffleId] = useState<number | undefined>(
         undefined
     );
+
+    const targetNetwork = STELLAR_CONFIG.network.charAt(0).toUpperCase() + STELLAR_CONFIG.network.slice(1);
+
+    const handleButtonClick = async () => {
+        if (!isConnected) {
+            await connect();
+            return;
+        }
+
+        if (isWrongNetwork) {
+            await switchNetwork();
+            return;
+        }
+
+        handleCreateRaffle();
+    };
 
     const handleCreateRaffle = async () => {
         setIsLoading(true);
@@ -67,7 +86,7 @@ const CreateRaffleButton: React.FC<CreateRaffleButtonProps> = ({
             setProgress(45);
 
             await new Promise((resolve) => setTimeout(resolve, 700));
-            setCurrentStep("Finalizing demo raffle...");
+            setCurrentStep("Finalizing raffle...");
             setProgress(85);
 
             await new Promise((resolve) => setTimeout(resolve, 500));
@@ -97,16 +116,22 @@ const CreateRaffleButton: React.FC<CreateRaffleButtonProps> = ({
         }
     };
 
+    const getButtonText = () => {
+        if (isLoading) return "Creating...";
+        if (!isConnected) return "Connect Wallet to Publish";
+        if (isWrongNetwork) return `Switch to ${targetNetwork}`;
+        return children;
+    };
+
     return (
         <>
             <button
-                onClick={handleCreateRaffle}
+                onClick={handleButtonClick}
                 disabled={isLoading}
-                className={`${className} ${
-                    isLoading ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className={`${className} ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+                    } ${(!isConnected || isWrongNetwork) && !isLoading ? "!bg-indigo-600 hover:!bg-indigo-700" : ""}`}
             >
-                {isLoading ? "Creating..." : children}
+                {getButtonText()}
             </button>
 
             {/* Processing Modal */}
@@ -122,7 +147,7 @@ const CreateRaffleButton: React.FC<CreateRaffleButtonProps> = ({
                     isVisible={showProcessingModal}
                     currentStep={currentStep}
                     progress={progress}
-                    network="Demo Mode"
+                    network={STELLAR_CONFIG.network}
                     onClose={() => {
                         if (!isLoading) {
                             setShowProcessingModal(false);
@@ -141,7 +166,7 @@ const CreateRaffleButton: React.FC<CreateRaffleButtonProps> = ({
                 <RaffleCreatedSuccess
                     isVisible={showSuccessModal}
                     raffleId={createdRaffleId}
-                    network="Demo Mode"
+                    network={STELLAR_CONFIG.network}
                     onClose={() => {
                         setShowSuccessModal(false);
                     }}
