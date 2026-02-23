@@ -5,9 +5,12 @@ import logo from "../assets/svg/logo.svg";
 import tikka from "../assets/svg/Tikka.svg";
 import WalletButton from "./WalletButton";
 import SignInButton from "./SignInButton";
+import { useWalletContext } from "../providers/WalletProvider";
+import { STELLAR_CONFIG } from "../config/stellar";
 
 const Navbar = ({ onStart }: { onStart?: () => void }) => {
     const [open, setOpen] = React.useState(false);
+    const { isConnected, isWrongNetwork, switchNetwork } = useWalletContext();
 
     const navItems = [
         { label: "Discover Raffles", href: "/home" },
@@ -15,6 +18,8 @@ const Navbar = ({ onStart }: { onStart?: () => void }) => {
         { label: "My Raffles", href: "/my-raffles" },
         { label: "Leaderboard", href: "/leaderboard" },
     ];
+
+    const targetNetwork = STELLAR_CONFIG.network.charAt(0).toUpperCase() + STELLAR_CONFIG.network.slice(1);
 
     return (
         <header className="w-full fixed-top">
@@ -47,6 +52,25 @@ const Navbar = ({ onStart }: { onStart?: () => void }) => {
                         )
                     )}
 
+                    {isConnected && (
+                        <div className="flex items-center gap-2 mr-2">
+                            {isWrongNetwork ? (
+                                <button
+                                    onClick={() => switchNetwork()}
+                                    className="flex items-center gap-2 rounded-full border border-red-500/50 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 transition"
+                                >
+                                    <span className="inline-flex h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                                    Switch to {targetNetwork}
+                                </button>
+                            ) : (
+                                <div className="flex items-center gap-2 rounded-full border border-[#52E5A4]/30 bg-[#52E5A4]/5 px-3 py-1.5 text-xs font-medium text-[#52E5A4]">
+                                    <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#52E5A4]" />
+                                    {targetNetwork}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <WalletButton />
                     <SignInButton />
                 </div>
@@ -54,7 +78,7 @@ const Navbar = ({ onStart }: { onStart?: () => void }) => {
                 {/* Mobile: hamburger */}
                 <button
                     type="button"
-                    onClick={() => setOpen((s) => !s)}
+                    onClick={() => setOpen((s: boolean) => !s)}
                     className="lg:hidden inline-flex items-center justify-center rounded-lg p-2 hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-white/40"
                     aria-controls="mobile-menu"
                     aria-expanded={open}
@@ -98,9 +122,8 @@ const Navbar = ({ onStart }: { onStart?: () => void }) => {
             {/* Mobile panel */}
             <div
                 id="mobile-menu"
-                className={`lg:hidden overflow-hidden transition-[max-height,opacity] duration-300 ${
-                    open ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-                }`}
+                className={`lg:hidden overflow-hidden transition-[max-height,opacity] duration-300 ${open ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                    }`}
             >
                 <div className="mx-auto flex max-w-7xl flex-col gap-1 px-6 pb-4 md:px-8">
                     {navItems.map((item) =>
@@ -125,12 +148,12 @@ const Navbar = ({ onStart }: { onStart?: () => void }) => {
                         )
                     )}
 
-nulla
+                    <a
                         onClick={() => {
                             setOpen(false);
                             if (onStart) onStart();
                         }}
-                        className="mt-2 rounded-xl px-6 py-3 text-center text-sm font-medium text-white hover:brightness-110 bg-[#FE3796]"
+                        className="mt-2 rounded-xl px-6 py-3 text-center text-sm font-medium text-white hover:brightness-110 bg-[#FE3796] cursor-pointer"
                     >
                         Get Started
                     </a>
